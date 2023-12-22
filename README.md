@@ -20,4 +20,5 @@ Masters Dissertation Thesis: "Estimating Financial Trends using historical data 
 ## Project structure
 
 `src/` contains all the source code
+
 `notebooks/` contains exploratory data analysis notebooks, can be used for debugging the code
