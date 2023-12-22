@@ -1,6 +1,6 @@
 from dataset import create_dataset
 
 symbols = ["^SPX", "^DAX", "^BET"]
+symbol = symbols[0]
 
-for symbol in symbols:
-    lagged, cols = create_dataset(symbol)
+dataset = create_dataset(symbol)
