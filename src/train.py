@@ -6,6 +6,8 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
+import plots
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -42,6 +44,7 @@ def save_model_checkpoint(model, model_path, epoch):
 def train(
     model,
     type,
+    symbol,
     train_valid,
     criterion,
     optimizer,
@@ -54,6 +57,7 @@ def train(
 
     model
     type: name of the model to be saved
+    symbol
     train_valid: (x_train, y_train, x_valid, y_valid)
     criterion
     optimizer
@@ -67,6 +71,7 @@ def train(
     model_path = os.path.join(
         "models",
         type,
+        symbol,
         "lags",
         str(x_train.shape[1]),
         "batch_size",
@@ -105,7 +110,7 @@ def train(
         model.eval()
         with torch.no_grad():
             epoch_valid_loss = perform_one_epoch(
-                mode="eval",
+                mode="valid",
                 model=model,
                 loader=valid_loader,
                 criterion=criterion,
@@ -125,5 +130,7 @@ def train(
         # Save model checkpoints
         if epoch % checkpoint_interval == 0 or epoch == epochs - 1:
             save_model_checkpoint(model, model_path, epoch)
+
+            plots.loss_curves(train_loss, valid_loss, model_path)
 
     return train_loss, valid_loss, model_path
