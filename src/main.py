@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+import plots
 from dataset import create_dataset
 from models import DNN
 from train import train
@@ -22,7 +23,7 @@ y_train = torch.tensor(y_train, dtype=torch.float32).unsqueeze(1)
 x_valid = torch.tensor(x_valid, dtype=torch.float32)
 y_valid = torch.tensor(y_valid, dtype=torch.float32).unsqueeze(1)
 
-model = DNN(input_shape=x_train.shape[1], layers=[8, 8]).to(device)
+model = DNN(input_shape=x_train.shape[1], layers=[32, 32]).to(device)
 
 # Binary Cross Entropy Loss
 criterion = nn.BCELoss()
@@ -39,3 +40,5 @@ train_loss, valid_loss, model_path = train(
     epochs=100,
     batch_size=32,
 )
+
+plots.loss_curves(train_loss, valid_loss, model_path)
