@@ -30,8 +30,9 @@ criterion = nn.BCELoss()
 # Adam optimizer
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-train(
+train_loss, valid_loss, model_path = train(
     model=model,
+    type="DNN1",
     train_valid=(x_train, y_train, x_valid, y_valid),
     criterion=criterion,
     optimizer=optimizer,

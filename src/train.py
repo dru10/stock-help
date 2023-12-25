@@ -1,3 +1,4 @@
+import os
 import time
 from collections import defaultdict
 
@@ -31,19 +32,48 @@ def perform_one_epoch(mode, model, loader, criterion, optimizer):
     return loss_per_batch
 
 
-def train(model, train_valid, criterion, optimizer, epochs, batch_size=1):
+def save_model_checkpoint(model, model_path, epoch):
+    final_path = os.path.join(model_path, str(epoch))
+    os.makedirs(final_path, exist_ok=True)
+
+    torch.save(model.state_dict(), os.path.join(final_path, "params.pt"))
+
+
+def train(
+    model,
+    type,
+    train_valid,
+    criterion,
+    optimizer,
+    epochs,
+    batch_size=1,
+    checkpoint_interval=10,
+):
     """
     Generic training loop
 
     model
+    type: name of the model to be saved
     train_valid: (x_train, y_train, x_valid, y_valid)
     criterion
     optimizer
     epochs
     batch_size: default = 1 means one example represents one batch
+    checkpoint_interval: default = 10 after how many epochs to save a checkpoint
     """
     model = model.to(device)
     x_train, y_train, x_valid, y_valid = train_valid
+
+    model_path = os.path.join(
+        "models",
+        type,
+        "lags",
+        str(x_train.shape[1]),
+        "batch_size",
+        str(batch_size),
+        "epochs",
+    )
+    os.makedirs(model_path, exist_ok=True)
 
     train_loader = DataLoader(
         TensorDataset(x_train, y_train), batch_size=batch_size, shuffle=False
@@ -91,3 +121,9 @@ def train(model, train_valid, criterion, optimizer, epochs, batch_size=1):
             f"Valid Loss: {valid_loss[epoch]:3.8f}",
             f"Time: {epoch_end - epoch_start:.2f} s",
         )
+
+        # Save model checkpoints
+        if epoch % checkpoint_interval == 0 or epoch == epochs - 1:
+            save_model_checkpoint(model, model_path, epoch)
+
+    return train_loss, valid_loss, model_path
