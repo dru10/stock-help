@@ -4,7 +4,7 @@ import torch.nn as nn
 
 
 class DNN(nn.Module):
-    def __init__(self, input_shape, layers=[32, 32]):
+    def __init__(self, input_shape, layers=[32, 32], dropout=0.2):
         super().__init__()
         layers = [input_shape] + layers + [1]
         self.net = nn.Sequential()
@@ -14,6 +14,7 @@ class DNN(nn.Module):
                     in_features=layers[index], out_features=layers[index + 1]
                 )
             )
+            self.net.append(nn.Dropout(dropout))
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
@@ -22,6 +23,7 @@ class DNN(nn.Module):
         return x
 
     def save_architecture(self, model_type):
-        destination = os.path.join("models", model_type, "summary.txt")
-        with open(destination, "w") as f:
+        destination = os.path.join("models", model_type)
+        os.makedirs(destination, exist_ok=True)
+        with open(os.path.join(destination, "summary.txt"), "w") as f:
             print(self, file=f)

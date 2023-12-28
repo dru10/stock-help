@@ -21,11 +21,11 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 mode = "eval"
 symbols = ["^SPX", "^DAX", "^BET"]
 symbol = symbols[0]
-model_type = "DNN2"
-batch_size = 64
+model_type = "DNN3"
+batch_size = 32
 epochs = 100
 lags = 10
-epoch = 99
+epoch = 80
 
 
 dataset = create_dataset(symbol)
@@ -45,7 +45,7 @@ for lags in [5, 10, 20]:
     x_test = torch.tensor(x_test[:, :lags], dtype=torch.float32)
     y_test = torch.tensor(y_test, dtype=torch.float32).unsqueeze(1)
 
-    model = DNN(input_shape=x_train.shape[1], layers=[64, 64]).to(device)
+    model = DNN(input_shape=x_train.shape[1], layers=[64, 32]).to(device)
     if mode == "train":
         model.save_architecture(model_type)
 
@@ -107,10 +107,18 @@ if mode == "eval":
     real_return = np.exp(np.cumsum(log_rets))
     random_return = random_returns(log_rets)
 
+    combination = torch.zeros_like(lag_predictions[next(iter(lag_predictions))])
+    for idx in range(len(combination)):
+        for key in lag_rets:
+            combination[idx] += key * lag_rets[key][idx]
+        combination[idx] /= sum(lag_rets.keys())
+    combination_return = calculate_return(combination, log_rets)
+
     plots.returns(
         dates,
         real_return,
-        candidates=[lag_rets[key] for key in lag_rets] + [random_return],
+        candidates=[lag_rets[key] for key in lag_rets]
+        + [combination_return, random_return],
         symbol=symbol,
         plot_destination=os.path.join(
             "models",
@@ -119,5 +127,7 @@ if mode == "eval":
             "lags",
             f"all_returns_batch_size_{batch_size}_epoch_{epoch}.png",
         ),
-        labels=["Real"] + [f"{key} lags" for key in lag_rets] + ["Random"],
+        labels=["Real"]
+        + [f"{key} lags" for key in lag_rets]
+        + ["Combination", "Random"],
     )

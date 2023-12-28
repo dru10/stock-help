@@ -55,8 +55,7 @@ def train(
     Generic training loop
 
     model
-    type: name of the model to be saved
-    symbol
+    model_path
     train_valid: (x_train, y_train, x_valid, y_valid)
     criterion
     optimizer
