@@ -89,32 +89,34 @@ def real_position(moves):
     return np.array(new_pos)
 
 
+def calculate_return(prediction, close, thresh=0.5):
+    moves = real_position(np.where(prediction > thresh, 1, -1).reshape(-1))
+    applied = np.multiply(close, moves)
+    return np.exp(np.cumsum(applied))
+
+
+def random_returns(close):
+    np.random.seed(42)
+    random_moves = real_position(np.random.choice([-1, 1], size=close.shape))
+    random_applied = np.multiply(close, random_moves)
+    return np.exp(np.cumsum(random_applied))
+
+
 def evaluate_predictions(
     symbol, model_path, pred, true, log_close, dates, thresh=0.5
 ):
-    np.random.seed(42)
-
-    ideal_moves = real_position(np.where(true > 0, 1, -1).reshape(-1))
-    pred_moves = real_position(np.where(pred > thresh, 1, -1).reshape(-1))
-    random_moves = real_position(
-        np.random.choice([-1, 1], size=log_close.shape)
-    )
-
-    ideal_applied = np.multiply(log_close, ideal_moves)
-    pred_applied = np.multiply(log_close, pred_moves)
-    random_applied = np.multiply(log_close, random_moves)
+    ideal_return = calculate_return(true, log_close, 0)
+    strategy_return = calculate_return(pred, log_close, thresh)
+    random_return = random_returns(log_close)
 
     real_return = np.exp(np.cumsum(log_close))
-    ideal_return = np.exp(np.cumsum(ideal_applied))
-    strategy_return = np.exp(np.cumsum(pred_applied))
-    random_return = np.exp(np.cumsum(random_applied))
 
     plots.returns(
         dates,
         real_return,
         [ideal_return],
         symbol,
-        plot_destination=os.path.join(model_path, "ideal_returns.jpg"),
+        plot_destination=os.path.join(model_path, "ideal_returns.png"),
         labels=["Real", "Ideal"],
     )
     plots.returns(
@@ -122,6 +124,6 @@ def evaluate_predictions(
         real_return,
         [strategy_return, random_return],
         symbol,
-        plot_destination=os.path.join(model_path, "strategy_return.jpg"),
+        plot_destination=os.path.join(model_path, "strategy_return.png"),
         labels=["Real", "Strategy", "Random"],
     )

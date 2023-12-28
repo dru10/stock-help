@@ -1,3 +1,5 @@
+import os
+
 import torch.nn as nn
 
 
@@ -18,3 +20,8 @@ class DNN(nn.Module):
         x = self.net(x)
         x = self.sigmoid(x)
         return x
+
+    def save_architecture(self, model_type):
+        destination = os.path.join("models", model_type, "summary.txt")
+        with open(destination, "w") as f:
+            print(self, file=f)

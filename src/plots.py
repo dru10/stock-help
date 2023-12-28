@@ -11,7 +11,8 @@ def loss_curves(train_loss, val_loss, model_path):
     plt.xlabel("Epoch")
     plt.ylabel("BCE Loss")
     plt.title("Model training loss curves")
-    plt.savefig(os.path.join(model_path, "loss_curves.jpg"))
+    plt.savefig(os.path.join(model_path, "loss_curves.png"))
+    plt.close()
 
 
 def returns(dates, real, candidates, symbol, plot_destination, labels):
@@ -26,3 +27,4 @@ def returns(dates, real, candidates, symbol, plot_destination, labels):
     plt.legend(labels)
     plt.title(f"Returns Simulation for {symbol}")
     plt.savefig(plot_destination)
+    plt.close()
