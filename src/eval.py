@@ -44,13 +44,17 @@ def calculate_stats(preds, y_test, model_path):
 
 """
         )
+        f.write(f"TP = {tp}\n")
+        f.write(f"FN = {fn}\n")
+        f.write(f"FP = {fp}\n")
+        f.write(f"TN = {tn}\n\n")
         f.write(f"Accuracy  = {acc:.5f}\n")
         f.write(f"Precision = {precision:.5f}\n")
         f.write(f"Recall    = {recall:.5f}\n")
         f.write(f"F1        = {f1:.5f}\n")
 
 
-def evaluate_model(model, x_test, y_test, model_path):
+def predict_test_set(model, x_test, y_test):
     model.to(device)
     model.eval()
     test_loader = DataLoader(TensorDataset(x_test, y_test), shuffle=False)
@@ -65,5 +69,4 @@ def evaluate_model(model, x_test, y_test, model_path):
             preds.append(pred.item() >= 0.5)
 
     predictions = torch.tensor(preds, dtype=torch.float32).view(-1, 1)
-
-    calculate_stats(predictions, y_test, model_path)
+    return predictions

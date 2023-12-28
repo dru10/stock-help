@@ -43,8 +43,7 @@ def save_model_checkpoint(model, model_path, epoch):
 
 def train(
     model,
-    type,
-    symbol,
+    model_path,
     train_valid,
     criterion,
     optimizer,
@@ -68,16 +67,6 @@ def train(
     model = model.to(device)
     x_train, y_train, x_valid, y_valid = train_valid
 
-    model_path = os.path.join(
-        "models",
-        type,
-        symbol,
-        "lags",
-        str(x_train.shape[1]),
-        "batch_size",
-        str(batch_size),
-        "epochs",
-    )
     os.makedirs(model_path, exist_ok=True)
 
     train_loader = DataLoader(
@@ -133,4 +122,4 @@ def train(
 
             plots.loss_curves(train_loss, valid_loss, model_path)
 
-    return train_loss, valid_loss, model_path
+    return train_loss, valid_loss
