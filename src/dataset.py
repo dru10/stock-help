@@ -47,5 +47,6 @@ def create_dataset(symbol, valid_start="2022-01-01", valid_end="2023-01-01"):
             "X": binaries[n_train + n_valid :, 1:],
             "Y": binaries[n_train + n_valid :, 0],
             "log_ret": log_rets_close[n_train + n_valid :],
+            "dates": lagged[n_train + n_valid :].index,
         },
     }
