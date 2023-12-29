@@ -52,9 +52,33 @@ for lags in [5, 10, 20]:
 
     # LSTM1
     model = LSTM(input_shape=x_train.shape[1])
+    # LSTM2
+    # model = LSTM(
+    #     input_shape=x_train.shape[1], hidden=[50], layers=[25], num_layers=2
+    # )
+    # LSTM3
+    # model = LSTM(
+    #     input_shape=x_train.shape[1],
+    #     hidden=[64, 32],
+    #     layers=[32, 16],
+    #     num_layers=4,
+    #     dropout=0.4,
+    # )
 
     # GRU1
     # model = GRU(input_shape=x_train.shape[1])
+    # GRU2
+    # model = GRU(
+    #     input_shape=x_train.shape[1], hidden=[50], layers=[25], num_layers=2
+    # )
+    # GRU3
+    # model = GRU(
+    #     input_shape=x_train.shape[1],
+    #     hidden=[64, 32],
+    #     layers=[32, 16],
+    #     num_layers=4,
+    #     dropout=0.4,
+    # )
 
     if mode == "train":
         model.save_architecture(model_type)
@@ -120,8 +144,8 @@ if mode == "eval":
     combination = torch.zeros_like(lag_predictions[next(iter(lag_predictions))])
     for idx in range(len(combination)):
         for key in lag_rets:
-            combination[idx] += key * lag_rets[key][idx]
-        combination[idx] /= sum(lag_rets.keys())
+            combination[idx] += lag_rets[key][idx]
+        combination[idx] /= len(lag_rets.keys())
     combination_return = calculate_return(combination, log_rets)
 
     plots.returns(

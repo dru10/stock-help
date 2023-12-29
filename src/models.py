@@ -1,6 +1,18 @@
 import os
 
+import torch
 import torch.nn as nn
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+class ParametricSigmoid(nn.Module):
+    def __init__(self, learnable_param=-10.0):
+        super().__init__()
+        self.learnable_param = learnable_param
+
+    def forward(self, x):
+        return 1 / (1 + torch.exp(self.learnable_param * x))
 
 
 class BaseModel(nn.Module):
@@ -17,6 +29,7 @@ class BaseModel(nn.Module):
             )
             if layers[index + 1] != 1:
                 self.net.append(nn.Dropout(dropout))
+        # self.sigmoid = ParametricSigmoid(-100)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
@@ -42,11 +55,11 @@ class DNN(BaseModel):
 
 
 class BaseRNN(BaseModel):
-    def __init__(self, dropout=0.2):
+    def __init__(self, dropout=0.2, n_hidden=2):
         super().__init__()
         self.reccurent = nn.ModuleList()
         self.dropout = nn.Dropout(dropout)
-        self.hidden = None
+        self.hidden = [None for _ in range(n_hidden)]
 
     def _add_recurrent_layers(self, type, hidden, num_layers, dropout):
         for idx in range(len(hidden) - 1):
@@ -59,23 +72,24 @@ class BaseRNN(BaseModel):
                 )
             )
 
-    def _get_hidden(self):
-        if self.hidden is None:
-            return self.hidden
+    def _get_hidden(self, idx):
+        hidden = self.hidden[idx]
+        if hidden is None:
+            return hidden
 
-        if type(self.hidden) == tuple:
-            return tuple([state.data for state in self.hidden])
+        if type(hidden) == tuple:
+            return tuple([state.data for state in hidden])
         else:
-            return self.hidden.data
+            return hidden.data
 
     def forward(self, x):
-        for rec in self.reccurent:
-            x, self.hidden = rec(x, self._get_hidden())
+        for idx, rec in enumerate(self.reccurent):
+            x, self.hidden[idx] = rec(x, self._get_hidden(idx))
             x = self.dropout(x)
-            return super().forward(x)
+        return super().forward(x)
 
     def reset_hidden(self):
-        self.hidden = None
+        self.hidden = [None for _ in self.hidden]
 
 
 class LSTM(BaseRNN):
@@ -87,7 +101,7 @@ class LSTM(BaseRNN):
         num_layers=2,
         dropout=0.2,
     ):
-        super().__init__(dropout)
+        super().__init__(dropout, len(hidden))
         hidden = [input_shape] + hidden
         layers = [hidden[-1]] + layers + [1]
         self._add_recurrent_layers(
@@ -105,7 +119,7 @@ class GRU(BaseRNN):
         num_layers=2,
         dropout=0.2,
     ):
-        super().__init__()
+        super().__init__(dropout, len(hidden))
         hidden = [input_shape] + hidden
         layers = [hidden[-1]] + layers + [1]
         self._add_recurrent_layers(
