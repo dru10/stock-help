@@ -79,6 +79,7 @@ def train(
     valid_loss = defaultdict(float)
 
     for epoch in range(epochs):
+        model.reset_hidden()
         epoch_start = time.time()
 
         # init hidden state for rnns

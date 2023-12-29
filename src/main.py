@@ -13,15 +13,13 @@ from eval import (
     predict_test_set,
     random_returns,
 )
-from models import DNN
+from models import DNN, GRU, LSTM
 from train import train
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 mode = "eval"
 symbols = ["^SPX", "^DAX", "^BET"]
 symbol = symbols[0]
-model_type = "DNN3"
+model_type = "LSTM1"
 batch_size = 32
 epochs = 100
 lags = 10
@@ -45,7 +43,19 @@ for lags in [5, 10, 20]:
     x_test = torch.tensor(x_test[:, :lags], dtype=torch.float32)
     y_test = torch.tensor(y_test, dtype=torch.float32).unsqueeze(1)
 
-    model = DNN(input_shape=x_train.shape[1], layers=[64, 32]).to(device)
+    # DNN1
+    # model = DNN(input_shape=x_train.shape[1], layers=[32, 32])
+    # DNN2
+    # model = DNN(input_shape=x_train.shape[1], layers=[64, 64])
+    # DNN3
+    # model = DNN(input_shape=x_train.shape[1], layers=[64, 32])
+
+    # LSTM1
+    model = LSTM(input_shape=x_train.shape[1])
+
+    # GRU1
+    # model = GRU(input_shape=x_train.shape[1])
+
     if mode == "train":
         model.save_architecture(model_type)
 
