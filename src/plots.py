@@ -4,9 +4,15 @@ import matplotlib.pyplot as plt
 
 
 def loss_curves(train_loss, val_loss, model_path):
+    try:
+        train_loss = train_loss.values()
+        val_loss = val_loss.values()
+    except AttributeError:
+        pass
+
     plt.figure()
-    plt.plot(train_loss.values(), label="Training Loss")
-    plt.plot(val_loss.values(), label="Validation Loss")
+    plt.plot(train_loss, label="Training Loss")
+    plt.plot(val_loss, label="Validation Loss")
     plt.legend()
     plt.xlabel("Epoch")
     plt.ylabel("BCE Loss")
