@@ -1,4 +1,6 @@
+import csv
 import os
+from collections import OrderedDict
 
 import numpy as np
 import torch
@@ -6,8 +8,68 @@ from torch.utils.data import DataLoader, TensorDataset
 
 import plots
 
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+def write_stats_to_txt(model_path, stats):
+    with open(os.path.join(model_path, "stats.txt"), "w") as f:
+        f.write(f"N_Predictions = {len(stats['preds'])}\n\n")
+        f.write(
+            f"""
+        |      |     Predicted       |
+        |----------------------------|
+        |      |   True  |   False   |
+ -------|----------------------------|
+        |True  |   {stats['tp']:3}   |  {stats['fn']:3}    |
+ Actual |----------------------------|
+        |False |   {stats['fp']:3}   |  {stats['tn']:3}    |
+ -------|----------------------------|
+
+"""
+        )
+        f.write(f"TP = {stats['tp']}\n")
+        f.write(f"FN = {stats['fn']}\n")
+        f.write(f"FP = {stats['fp']}\n")
+        f.write(f"TN = {stats['tn']}\n\n")
+        f.write(f"Accuracy  = {stats['acc']:.5f}\n")
+        f.write(f"Precision = {stats['precision']:.5f}\n")
+        f.write(f"Recall    = {stats['recall']:.5f}\n")
+        f.write(f"FPR       = {stats['fpr']:.5f}\n")
+        f.write(f"TPR/FPR   = {stats['recall']/stats['fpr']:.5f}\n")
+        f.write(f"F1        = {stats['f1']:.5f}\n")
+
+
+def write_stats_to_csv(model_path, stats, filepath="results.csv"):
+    _, model_type, symbol, _, lags, _, batch_size, _, epoch = os.path.normpath(
+        model_path
+    ).split(os.sep)
+
+    values = OrderedDict(
+        [
+            ("ModelType", model_type),
+            ("Symbol", symbol),
+            ("Lags", lags),
+            ("BatchSize", batch_size),
+            ("Epoch", epoch),
+            ("TP", stats["tp"]),
+            ("TN", stats["tn"]),
+            ("FP", stats["fp"]),
+            ("TN", stats["tn"]),
+            ("Accuracy", stats["acc"]),
+            ("Precision", stats["precision"]),
+            ("Recall", stats["recall"]),
+            ("FPR", stats["fpr"]),
+            ("TPR/FPR", stats["recall"] / stats["fpr"]),
+            ("F1", stats["f1"]),
+        ]
+    )
+
+    with open(filepath, "a", newline="") as file:
+        writer = csv.writer(file)
+        if file.tell() == 0:
+            # File is empty, write headers
+            writer.writerow(values.keys())
+        writer.writerow(values.values())
 
 
 def calculate_stats(preds, y_test, model_path):
@@ -35,31 +97,21 @@ def calculate_stats(preds, y_test, model_path):
     fpr = fp / (fp + tn)
     f1 = 2 * precision * recall / (precision + recall)
 
-    with open(os.path.join(model_path, "stats.txt"), "w") as f:
-        f.write(f"N_Predictions = {len(preds)}\n\n")
-        f.write(
-            f"""
-        |      |     Predicted       |
-        |----------------------------|
-        |      |   True  |   False   |
- -------|----------------------------|
-        |True  |   {tp:3}   |  {fn:3}    |
- Actual |----------------------------|
-        |False |   {fp:3}   |  {tn:3}    |
- -------|----------------------------|
+    stats = {
+        "preds": preds,
+        "tp": tp,
+        "fn": fn,
+        "fp": fp,
+        "tn": tn,
+        "acc": acc,
+        "precision": precision,
+        "recall": recall,
+        "fpr": fpr,
+        "f1": f1,
+    }
 
-"""
-        )
-        f.write(f"TP = {tp}\n")
-        f.write(f"FN = {fn}\n")
-        f.write(f"FP = {fp}\n")
-        f.write(f"TN = {tn}\n\n")
-        f.write(f"Accuracy  = {acc:.5f}\n")
-        f.write(f"Precision = {precision:.5f}\n")
-        f.write(f"Recall    = {recall:.5f}\n")
-        f.write(f"FPR       = {fpr:.5f}\n")
-        f.write(f"TPR/FPR   = {recall/fpr:.5f}\n")
-        f.write(f"F1        = {f1:.5f}\n")
+    write_stats_to_txt(model_path, stats)
+    write_stats_to_csv(model_path, stats)
 
 
 def predict_test_set(model, x_test, y_test):
