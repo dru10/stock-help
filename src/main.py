@@ -1,18 +1,15 @@
 import os
 
-import numpy as np
 import torch
 import torch.nn as nn
 
 import models
-import plots
 from dataset import create_dataset
 from eval import (
-    calculate_return,
     calculate_stats,
+    evaluate_all_lags,
     evaluate_predictions,
     predict_test_set,
-    random_returns,
 )
 from train import train
 
@@ -132,34 +129,6 @@ for lags in [5, 10, 20]:
         )
 
 if mode == "eval":
-    lag_rets = {
-        lag: calculate_return(pred, log_rets)
-        for lag, pred in lag_predictions.items()
-    }
-    real_return = np.exp(np.cumsum(log_rets))
-    random_return = random_returns(log_rets)
-
-    combination = torch.zeros_like(lag_predictions[next(iter(lag_predictions))])
-    for idx in range(len(combination)):
-        for key in lag_rets:
-            combination[idx] += lag_rets[key][idx]
-        combination[idx] /= len(lag_rets.keys())
-    combination_return = calculate_return(combination, log_rets)
-
-    plots.returns(
-        dates,
-        real_return,
-        candidates=[lag_rets[key] for key in lag_rets]
-        + [combination_return, random_return],
-        symbol=symbol,
-        plot_destination=os.path.join(
-            "models",
-            model_type,
-            symbol,
-            "lags",
-            f"all_returns_batch_size_{batch_size}_epoch_{epoch}.png",
-        ),
-        labels=["Real"]
-        + [f"{key} lags" for key in lag_rets]
-        + ["Combination", "Random"],
+    evaluate_all_lags(
+        dates, log_rets, lag_predictions, symbol, model_type, batch_size, epoch
     )

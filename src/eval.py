@@ -32,6 +32,7 @@ def calculate_stats(preds, y_test, model_path):
     acc = (tp + tn) / (tp + tn + fp + fn)
     precision = tp / (tp + fp)
     recall = tp / (tp + fn)
+    fpr = fp / (fp + tn)
     f1 = 2 * precision * recall / (precision + recall)
 
     with open(os.path.join(model_path, "stats.txt"), "w") as f:
@@ -56,6 +57,8 @@ def calculate_stats(preds, y_test, model_path):
         f.write(f"Accuracy  = {acc:.5f}\n")
         f.write(f"Precision = {precision:.5f}\n")
         f.write(f"Recall    = {recall:.5f}\n")
+        f.write(f"FPR       = {fpr:.5f}\n")
+        f.write(f"TPR/FPR   = {recall/fpr:.5f}\n")
         f.write(f"F1        = {f1:.5f}\n")
 
 
@@ -126,4 +129,45 @@ def evaluate_predictions(
         symbol,
         plot_destination=os.path.join(model_path, "strategy_return.png"),
         labels=["Real", "Strategy", "Random"],
+    )
+
+
+def evaluate_all_lags(
+    dates, log_rets, lag_predictions, symbol, model_type, batch_size, epoch
+):
+    lag_rets = {
+        lag: calculate_return(pred, log_rets)
+        for lag, pred in lag_predictions.items()
+    }
+    real_return = np.exp(np.cumsum(log_rets))
+    random_return = random_returns(log_rets)
+
+    lag = next(iter(lag_predictions))
+    try:
+        combination = torch.zeros_like(lag_predictions[lag])
+    except TypeError:
+        combination = np.zeros_like(lag_predictions[lag])
+
+    for idx in range(len(combination)):
+        for key in lag_rets:
+            combination[idx] += lag_rets[key][idx]
+        combination[idx] /= len(lag_rets.keys())
+    combination_return = calculate_return(combination, log_rets)
+
+    plots.returns(
+        dates,
+        real_return,
+        candidates=[lag_rets[key] for key in lag_rets]
+        + [combination_return, random_return],
+        symbol=symbol,
+        plot_destination=os.path.join(
+            "models",
+            model_type,
+            symbol,
+            "lags",
+            f"all_returns_batch_size_{batch_size}_epoch_{epoch}.png",
+        ),
+        labels=["Real"]
+        + [f"{key} lags" for key in lag_rets]
+        + ["Combination", "Random"],
     )
