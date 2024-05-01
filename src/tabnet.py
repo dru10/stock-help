@@ -27,14 +27,10 @@ class ModelCheckpoint(Callback):
 
 
 mode = "eval"
-# symbols = ["^SPX", "^DAX", "^BET"]
-symbols = ["^SPX"]
-symbol = symbols[0]
+symbols = ["^SPX", "^DAX", "^BET"]
 model_type = "TNN3"
 epochs = 100
 batch_size = 1024
-lags = 5
-epoch = 20
 
 for symbol in symbols:
     ds = create_dataset(symbol)

@@ -52,7 +52,7 @@ def write_stats_to_csv(model_path, stats, filepath="results.csv"):
             ("BatchSize", batch_size),
             ("Epoch", epoch),
             ("TP", stats["tp"]),
-            ("TN", stats["tn"]),
+            ("FN", stats["fn"]),
             ("FP", stats["fp"]),
             ("TN", stats["tn"]),
             ("Accuracy", stats["acc"]),
@@ -92,10 +92,10 @@ def calculate_stats(preds, y_test, model_path):
                 # False positive
                 fp += 1
     acc = (tp + tn) / (tp + tn + fp + fn)
-    precision = tp / (tp + fp)
+    precision = tp / (tp + fp + 0.000001)
     recall = tp / (tp + fn)
     fpr = fp / (fp + tn)
-    f1 = 2 * precision * recall / (precision + recall)
+    f1 = 2 * precision * recall / (precision + recall + 0.000001)
 
     stats = {
         "preds": preds,
@@ -106,7 +106,7 @@ def calculate_stats(preds, y_test, model_path):
         "acc": acc,
         "precision": precision,
         "recall": recall,
-        "fpr": fpr,
+        "fpr": fpr + 0.000001,
         "f1": f1,
     }
 

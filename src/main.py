@@ -15,14 +15,10 @@ from eval import (
 from train import train
 
 mode = "eval"
-# symbols = ["^SPX", "^DAX", "^BET"]
-symbols = ["^SPX"]
-symbol = symbols[0]
-model_type = "LSTM1"
-batch_size = 32
+symbols = ["^SPX", "^DAX", "^BET"]
+model_type = "GRU3"
+batch_size = 1024
 epochs = 100
-lags = 10
-epoch = 90
 
 for symbol in symbols:
     dataset = create_dataset(symbol)
