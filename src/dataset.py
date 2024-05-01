@@ -43,13 +43,15 @@ def create_dataset(
         df_scaled = np.log(df / df.shift(1)).dropna()
 
     lagged, cols = add_lags(df_scaled)
-
-    if mode == "logs":
-        log_rets_close = np.array(lagged["Close"])
-        lagged = np.digitize(lagged, bins=[0])
-
     n_train = len(lagged.loc[:valid_start])
     n_valid = len(lagged.loc[valid_start:valid_end])
+    dates = lagged[n_train + n_valid :].index
+
+    if mode == "price":
+        lagged = np.array(lagged)
+    elif mode == "logs":
+        log_rets_close = np.array(lagged["Close"])
+        lagged = np.digitize(lagged, bins=[0])
 
     payload = {
         "train": {
@@ -63,7 +65,7 @@ def create_dataset(
         "test": {
             "X": lagged[n_train + n_valid :, 1:],
             "Y": lagged[n_train + n_valid :, 0],
-            "dates": lagged[n_train + n_valid :].index,
+            "dates": dates,
         },
     }
 
