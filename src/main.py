@@ -14,10 +14,10 @@ from eval import (
 )
 from train import train
 
-mode = "eval"
+mode = "train"
 symbols = ["^SPX", "^DAX", "^BET"]
-model_type = "GRU3"
-batch_size = 1024
+model_type = "DNN1"
+batch_size = 32
 epochs = 100
 ds_mode = "price"
 
@@ -72,19 +72,26 @@ for symbol in symbols:
                 "dropout": 0.4,
             },
         }
-        model = getattr(models, model_type[:-1])(**models_kwargs[model_type])
+        model_mode = "linear" if ds_mode == "price" else "binary"
+        model = getattr(models, model_type[:-1])(
+            **models_kwargs[model_type], mode=model_mode
+        )
 
         if mode == "train":
             model.save_architecture(model_type)
 
-        # Binary Cross Entropy Loss
-        criterion = nn.BCELoss()
+        if model_mode == "linear":
+            criterion = nn.MSELoss()
+        elif model_mode == "binary":
+            # Binary Cross Entropy Loss
+            criterion = nn.BCELoss()
 
         # Adam optimizer
         optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
         model_path = os.path.join(
             "models",
+            model_mode,
             model_type,
             symbol,
             "lags",
