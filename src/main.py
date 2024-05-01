@@ -19,9 +19,10 @@ symbols = ["^SPX", "^DAX", "^BET"]
 model_type = "GRU3"
 batch_size = 1024
 epochs = 100
+ds_mode = "price"
 
 for symbol in symbols:
-    dataset = create_dataset(symbol)
+    dataset = create_dataset(symbol, mode=ds_mode)
 
     lag_predictions = defaultdict(dict)
 
