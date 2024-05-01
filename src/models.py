@@ -16,9 +16,10 @@ class ParametricSigmoid(nn.Module):
 
 
 class BaseModel(nn.Module):
-    def __init__(self):
+    def __init__(self, mode="linear"):
         super().__init__()
         self.net = nn.Sequential()
+        self.mode = mode
 
     def _add_fc_layers(self, layers, dropout):
         for index in range(len(layers) - 1):
@@ -34,11 +35,12 @@ class BaseModel(nn.Module):
 
     def forward(self, x):
         x = self.net(x)
-        x = self.sigmoid(x)
+        if self.mode == "binary":
+            x = self.sigmoid(x)
         return x
 
     def save_architecture(self, model_type):
-        destination = os.path.join("models", model_type)
+        destination = os.path.join("models", self.mode, model_type)
         os.makedirs(destination, exist_ok=True)
         with open(os.path.join(destination, "summary.txt"), "w") as f:
             print(self, file=f)
@@ -48,15 +50,15 @@ class BaseModel(nn.Module):
 
 
 class DNN(BaseModel):
-    def __init__(self, input_shape, layers=[32, 32], dropout=0.2):
-        super().__init__()
+    def __init__(self, input_shape, layers=[32, 32], dropout=0.2, **kwargs):
+        super().__init__(**kwargs)
         layers = [input_shape] + layers + [1]
         self._add_fc_layers(layers=layers, dropout=dropout)
 
 
 class BaseRNN(BaseModel):
-    def __init__(self, dropout=0.2, n_hidden=2):
-        super().__init__()
+    def __init__(self, dropout=0.2, n_hidden=2, **kwargs):
+        super().__init__(**kwargs)
         self.reccurent = nn.ModuleList()
         self.dropout = nn.Dropout(dropout)
         self.hidden = [None for _ in range(n_hidden)]
@@ -100,8 +102,9 @@ class LSTM(BaseRNN):
         layers=[16],
         num_layers=2,
         dropout=0.2,
+        **kwargs,
     ):
-        super().__init__(dropout, len(hidden))
+        super().__init__(dropout, len(hidden), **kwargs)
         hidden = [input_shape] + hidden
         layers = [hidden[-1]] + layers + [1]
         self._add_recurrent_layers(
@@ -118,8 +121,9 @@ class GRU(BaseRNN):
         layers=[16],
         num_layers=2,
         dropout=0.2,
+        **kwargs,
     ):
-        super().__init__(dropout, len(hidden))
+        super().__init__(dropout, len(hidden), **kwargs)
         hidden = [input_shape] + hidden
         layers = [hidden[-1]] + layers + [1]
         self._add_recurrent_layers(
