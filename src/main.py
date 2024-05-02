@@ -4,20 +4,13 @@ from collections import defaultdict
 import torch
 import torch.nn as nn
 
+import eval
 import models
 from dataset import create_dataset
-from eval import (
-    calculate_stats,
-    evaluate_all_lags,
-    evaluate_predictions,
-    predict_test_set,
-)
 from train import train
 
-mode = "train"
+mode = "eval"
 symbols = ["^SPX", "^DAX", "^BET"]
-model_type = "DNN1"
-batch_size = 32
 epochs = 100
 ds_mode = "price"
 
@@ -143,27 +136,46 @@ for symbol in symbols:
                             torch.load(os.path.join(final_path, "params.pt"))
                         )
 
-                        predictions = predict_test_set(model, x_test, y_test)
+                        predictions = eval.predict_test_set(
+                            model, x_test, y_test, mode=model_mode
+                        )
 
                         lag_predictions[epoch][lags] = predictions
 
-                        calculate_stats(predictions, y_test, final_path)
+                        if model_mode == "linear":
+                            eval.calculate_linear_stats(
+                                predictions, y_test, final_path
+                            )
+                        elif model_mode == "binary":
+                            eval.calculate_stats(
+                                predictions, y_test, final_path
+                            )
 
-                        log_rets = dataset["test"]["log_ret"]
                         dates = dataset["test"]["dates"]
-
-                        evaluate_predictions(
-                            symbol=symbol,
-                            model_path=final_path,
-                            pred=predictions,
-                            true=y_test,
-                            log_close=log_rets,
-                            dates=dates,
-                        )
+                        if ds_mode == "price":
+                            scaler = dataset["scaler"]
+                            eval.evaluate_linear_predictions(
+                                symbol=symbol,
+                                model_path=final_path,
+                                pred=predictions,
+                                true=y_test,
+                                scaler=scaler,
+                                dates=dates,
+                            )
+                        elif ds_mode == "logs":
+                            log_rets = dataset["test"]["log_ret"]
+                            eval.evaluate_predictions(
+                                symbol=symbol,
+                                model_path=final_path,
+                                pred=predictions,
+                                true=y_test,
+                                log_close=log_rets,
+                                dates=dates,
+                            )
 
             if mode == "eval":
                 for epoch in list(range(0, epochs, 10)) + [epochs - 1]:
-                    evaluate_all_lags(
+                    eval.evaluate_all_lags(
                         dates,
                         log_rets,
                         lag_predictions[epoch],

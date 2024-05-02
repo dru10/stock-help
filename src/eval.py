@@ -4,6 +4,7 @@ from collections import OrderedDict
 
 import numpy as np
 import torch
+from scipy.stats import pearsonr
 from torch.utils.data import DataLoader, TensorDataset
 
 import plots
@@ -39,10 +40,18 @@ def write_stats_to_txt(model_path, stats):
         f.write(f"F1        = {stats['f1']:.5f}\n")
 
 
-def write_stats_to_csv(model_path, stats, filepath="results.csv"):
-    _, model_type, symbol, _, lags, _, batch_size, _, epoch = os.path.normpath(
-        model_path
-    ).split(os.sep)
+def write_linear_stats_to_txt(model_path, stats):
+    with open(os.path.join(model_path, "stats.txt"), "w") as f:
+        f.write(f"N_Predictions = {len(stats['preds'])}\n\n")
+        f.write(f"MSE   = {stats['mse']:.5f}\n")
+        f.write(f"MAPE  = {stats['mape']:.5f}\n")
+        f.write(f"R     = {stats['R']:.5f}\n")
+
+
+def write_stats_to_csv(model_path, stats, filepath="results"):
+    _, mode, model_type, symbol, _, lags, _, batch_size, _, epoch = (
+        os.path.normpath(model_path).split(os.sep)
+    )
 
     values = OrderedDict(
         [
@@ -51,25 +60,55 @@ def write_stats_to_csv(model_path, stats, filepath="results.csv"):
             ("Lags", lags),
             ("BatchSize", batch_size),
             ("Epoch", epoch),
-            ("TP", stats["tp"]),
-            ("FN", stats["fn"]),
-            ("FP", stats["fp"]),
-            ("TN", stats["tn"]),
-            ("Accuracy", stats["acc"]),
-            ("Precision", stats["precision"]),
-            ("Recall", stats["recall"]),
-            ("FPR", stats["fpr"]),
-            ("TPR/FPR", stats["recall"] / stats["fpr"]),
-            ("F1", stats["f1"]),
         ]
     )
 
-    with open(filepath, "a", newline="") as file:
+    if mode == "binary":
+        values.update(
+            [
+                ("TP", stats["tp"]),
+                ("FN", stats["fn"]),
+                ("FP", stats["fp"]),
+                ("TN", stats["tn"]),
+                ("Accuracy", stats["acc"]),
+                ("Precision", stats["precision"]),
+                ("Recall", stats["recall"]),
+                ("FPR", stats["fpr"]),
+                ("TPR/FPR", stats["recall"] / stats["fpr"]),
+                ("F1", stats["f1"]),
+            ]
+        )
+    elif mode == "linear":
+        values.update(
+            [
+                ("MSE", stats["mse"].item()),
+                ("MAPE", stats["mape"].item()),
+                ("R", stats["R"]),
+            ]
+        )
+
+    with open(f"{filepath}_{mode}.csv", "a", newline="") as file:
         writer = csv.writer(file)
         if file.tell() == 0:
             # File is empty, write headers
             writer.writerow(values.keys())
         writer.writerow(values.values())
+
+
+def calculate_linear_stats(preds, y_test, model_path):
+    mse = torch.nn.functional.mse_loss(preds, y_test)
+    mape = torch.mean(torch.abs((y_test - preds) / y_test)) * 100
+    R, p = pearsonr(preds.numpy().flatten(), y_test.numpy().flatten())
+
+    stats = {
+        "preds": preds,
+        "mse": mse,
+        "mape": mape,
+        "R": R,
+    }
+
+    write_linear_stats_to_txt(model_path, stats)
+    write_stats_to_csv(model_path, stats)
 
 
 def calculate_stats(preds, y_test, model_path):
@@ -114,7 +153,7 @@ def calculate_stats(preds, y_test, model_path):
     write_stats_to_csv(model_path, stats)
 
 
-def predict_test_set(model, x_test, y_test):
+def predict_test_set(model, x_test, y_test, mode="linear"):
     model.to(device)
     model.eval()
     test_loader = DataLoader(TensorDataset(x_test, y_test), shuffle=False)
@@ -126,7 +165,10 @@ def predict_test_set(model, x_test, y_test):
 
             pred = model(X)
 
-            preds.append(pred.item() >= 0.5)
+            if mode == "linear":
+                preds.append(pred.item())
+            elif mode == "binary":
+                preds.append(pred.item() >= 0.5)
 
     predictions = torch.tensor(preds, dtype=torch.float32).view(-1, 1)
     return predictions
@@ -155,6 +197,20 @@ def random_returns(close):
     random_moves = real_position(np.random.choice([-1, 1], size=close.shape))
     random_applied = np.multiply(close, random_moves)
     return np.exp(np.cumsum(random_applied))
+
+
+def evaluate_linear_predictions(symbol, model_path, pred, true, scaler, dates):
+    predictions = scaler.inverse_transform(pred)
+    true_values = scaler.inverse_transform(true)
+
+    plots.price_predictions(
+        dates,
+        predictions,
+        true_values,
+        symbol,
+        plot_destination=os.path.join(model_path, "price_predictions.png"),
+        labels=["Predicted", "True"],
+    )
 
 
 def evaluate_predictions(

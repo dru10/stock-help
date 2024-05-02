@@ -34,3 +34,17 @@ def returns(dates, real, candidates, symbol, plot_destination, labels):
     plt.title(f"Returns Simulation for {symbol}")
     plt.savefig(plot_destination)
     plt.close()
+
+
+def price_predictions(dates, pred, true, symbol, plot_destination, labels):
+    plt.style.use("fivethirtyeight")
+
+    plt.figure(figsize=(16, 8))
+    plt.xlabel("Date")
+    plt.ylabel("Price")
+    plt.plot(dates, pred)
+    plt.plot(dates, true)
+    plt.legend(labels)
+    plt.title(f"Price Predictions for {symbol}")
+    plt.savefig(plot_destination)
+    plt.close()
