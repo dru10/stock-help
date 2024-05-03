@@ -4,9 +4,9 @@ from collections import defaultdict
 from pytorch_tabnet.callbacks import Callback
 from pytorch_tabnet.tab_model import TabNetClassifier, TabNetRegressor
 
+import eval
 import plots
 from dataset import create_dataset
-from eval import calculate_stats, evaluate_all_lags, evaluate_predictions
 
 
 class ModelCheckpoint(Callback):
@@ -26,7 +26,7 @@ class ModelCheckpoint(Callback):
             self.model.save_model(os.path.join(final_path, "params"))
 
 
-mode = "train"
+mode = "eval"
 symbols = ["^SPX", "^DAX", "^BET"]
 epochs = 100
 ds_mode = "price"
@@ -103,31 +103,61 @@ for symbol in symbols:
                         model.load_model(os.path.join(final_path, "params.zip"))
 
                         predictions = model.predict(x_test[:, :lags])
-
                         lag_predictions[epoch][lags] = predictions
 
-                        calculate_stats(predictions, y_test, final_path)
+                        if model_mode == "linear":
+                            eval.calculate_linear_stats(
+                                predictions, y_test, final_path
+                            )
+                        elif model_mode == "binary":
+                            eval.calculate_stats(
+                                predictions, y_test, final_path
+                            )
 
-                        log_rets = ds["test"]["log_ret"]
                         dates = ds["test"]["dates"]
-
-                        evaluate_predictions(
-                            symbol=symbol,
-                            model_path=final_path,
-                            pred=predictions,
-                            true=y_test,
-                            log_close=log_rets,
-                            dates=dates,
-                        )
-
+                        if ds_mode == "price":
+                            scaler = ds["scaler"]
+                            eval.evaluate_linear_predictions(
+                                symbol=symbol,
+                                model_path=final_path,
+                                pred=predictions,
+                                true=y_test,
+                                scaler=scaler,
+                                dates=dates,
+                            )
+                        elif ds_mode == "logs":
+                            log_rets = ds["test"]["log_ret"]
+                            eval.evaluate_predictions(
+                                symbol=symbol,
+                                model_path=final_path,
+                                pred=predictions,
+                                true=y_test,
+                                log_close=log_rets,
+                                dates=dates,
+                            )
             if mode == "eval":
                 for epoch in list(range(0, epochs, 10)) + [epochs - 1]:
-                    evaluate_all_lags(
-                        dates,
-                        log_rets,
-                        lag_predictions[epoch],
-                        symbol,
-                        model_type,
-                        batch_size,
-                        epoch,
-                    )
+                    if ds_mode == "price":
+                        eval.evaluate_all_lags_price(
+                            dates,
+                            y_test,
+                            lag_predictions[epoch],
+                            scaler,
+                            symbol,
+                            model_type,
+                            batch_size,
+                            epoch,
+                        )
+                    elif ds_mode == "logs":
+                        eval.evaluate_all_lags(
+                            dates,
+                            log_rets,
+                            lag_predictions[epoch],
+                            symbol,
+                            model_type,
+                            batch_size,
+                            epoch,
+                        )
+                print(
+                    f"Finished {model_type} for symbol {symbol} with batch size {batch_size}"
+                )

@@ -96,6 +96,11 @@ def write_stats_to_csv(model_path, stats, filepath="results"):
 
 
 def calculate_linear_stats(preds, y_test, model_path):
+    if type(preds) == np.ndarray:
+        preds = torch.tensor(preds, dtype=torch.float32)
+    if type(y_test) == np.ndarray:
+        y_test = torch.tensor(y_test, dtype=torch.float32)
+
     mse = torch.nn.functional.mse_loss(preds, y_test)
     mape = torch.mean(torch.abs((y_test - preds) / y_test)) * 100
     R, p = pearsonr(preds.numpy().flatten(), y_test.numpy().flatten())
@@ -295,7 +300,10 @@ def evaluate_all_lags_price(
         for key in lag_rets:
             combination[idx] += lag_rets[key][idx]
         combination[idx] /= len(lag_rets.keys())
-    combination_return = price_returns(true_values, combination.numpy())
+    try:
+        combination_return = price_returns(true_values, combination.numpy())
+    except AttributeError:
+        combination_return = price_returns(true_values, combination)
 
     plots.returns(
         dates,
