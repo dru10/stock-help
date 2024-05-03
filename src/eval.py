@@ -181,7 +181,10 @@ def real_position(moves):
         if total == 0 and pos == -1:
             new_pos.append(0)
         else:
-            new_pos.append(pos)
+            try:
+                new_pos.append(pos.item())
+            except AttributeError:
+                new_pos.append(pos)
             total += pos
     return np.array(new_pos)
 
@@ -199,9 +202,32 @@ def random_returns(close):
     return np.exp(np.cumsum(random_applied))
 
 
+def price_returns(true, predictions=None):
+    true_returns = true / true[0]
+    changes = true_returns - np.roll(true_returns, 1)
+    if predictions is None:
+        # Return random predictions
+        np.random.seed(42)
+        moves = real_position(
+            np.random.choice([-1, 1], size=true_returns.shape)
+        ).reshape(-1, 1)
+    else:
+        moves = real_position(np.where(predictions > true, 1, -1)).reshape(
+            -1, 1
+        )
+
+    strategy = moves[1:] * changes[1:]
+    strategy = np.concatenate((np.array([[1]]), strategy))
+    return np.cumsum(strategy).reshape(-1, 1)
+
+
 def evaluate_linear_predictions(symbol, model_path, pred, true, scaler, dates):
     predictions = scaler.inverse_transform(pred)
     true_values = scaler.inverse_transform(true)
+
+    true_returns = true_values / true_values[0]
+    strategy_returns = price_returns(true_values, predictions)
+    random_returns = price_returns(true_values)
 
     plots.price_predictions(
         dates,
@@ -210,6 +236,14 @@ def evaluate_linear_predictions(symbol, model_path, pred, true, scaler, dates):
         symbol,
         plot_destination=os.path.join(model_path, "price_predictions.png"),
         labels=["Predicted", "True"],
+    )
+    plots.returns(
+        dates,
+        true_returns,
+        [strategy_returns, random_returns],
+        symbol,
+        plot_destination=os.path.join(model_path, "strategy_return.png"),
+        labels=["Real", "Strategy", "Random"],
     )
 
 
