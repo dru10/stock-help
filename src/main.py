@@ -175,12 +175,27 @@ for symbol in symbols:
 
             if mode == "eval":
                 for epoch in list(range(0, epochs, 10)) + [epochs - 1]:
-                    eval.evaluate_all_lags(
-                        dates,
-                        log_rets,
-                        lag_predictions[epoch],
-                        symbol,
-                        model_type,
-                        batch_size,
-                        epoch,
-                    )
+                    if ds_mode == "price":
+                        eval.evaluate_all_lags_price(
+                            dates,
+                            y_test,
+                            lag_predictions[epoch],
+                            scaler,
+                            symbol,
+                            model_type,
+                            batch_size,
+                            epoch,
+                        )
+                    elif ds_mode == "logs":
+                        eval.evaluate_all_lags(
+                            dates,
+                            log_rets,
+                            lag_predictions[epoch],
+                            symbol,
+                            model_type,
+                            batch_size,
+                            epoch,
+                        )
+                print(
+                    f"Finished {model_type} for symbol {symbol} with batch size {batch_size}"
+                )

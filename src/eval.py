@@ -274,6 +274,49 @@ def evaluate_predictions(
     )
 
 
+def evaluate_all_lags_price(
+    dates, true, lag_predictions, scaler, symbol, model_type, batch_size, epoch
+):
+    true_values = scaler.inverse_transform(true)
+    lag_rets = {
+        lag: price_returns(true_values, scaler.inverse_transform(pred))
+        for lag, pred in lag_predictions.items()
+    }
+    true_return = true_values / true_values[0]
+    random_return = price_returns(true_values)
+
+    lag = next(iter(lag_predictions))
+    try:
+        combination = torch.zeros_like(lag_predictions[lag])
+    except TypeError:
+        combination = np.zeros_like(lag_predictions[lag])
+
+    for idx in range(len(combination)):
+        for key in lag_rets:
+            combination[idx] += lag_rets[key][idx]
+        combination[idx] /= len(lag_rets.keys())
+    combination_return = price_returns(true_values, combination.numpy())
+
+    plots.returns(
+        dates,
+        true_return,
+        candidates=[lag_rets[key] for key in lag_rets]
+        + [combination_return, random_return],
+        symbol=symbol,
+        plot_destination=os.path.join(
+            "models",
+            "linear",
+            model_type,
+            symbol,
+            "lags",
+            f"all_returns_batch_size_{batch_size}_epoch_{epoch}.png",
+        ),
+        labels=["Real"]
+        + [f"{key} lags" for key in lag_rets]
+        + ["Combination", "Random"],
+    )
+
+
 def evaluate_all_lags(
     dates, log_rets, lag_predictions, symbol, model_type, batch_size, epoch
 ):
@@ -304,6 +347,7 @@ def evaluate_all_lags(
         symbol=symbol,
         plot_destination=os.path.join(
             "models",
+            "binary",
             model_type,
             symbol,
             "lags",
